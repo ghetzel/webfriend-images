@@ -3,10 +3,76 @@ from webfriend.scripting.commands.base import CommandProxy
 from PIL import Image
 from PIL.ExifTags import TAGS
 import io
+import logging
 import os
 import pyocr
 import pyocr.builders
 from collections import OrderedDict
+from unidecode import unidecode
+
+
+def bbox2properties(bbox, rescale_factor=1.0):
+    dest = OrderedDict()
+    dest['bounding'] = OrderedDict()
+    dest['bounding']['start'] = OrderedDict()
+    dest['bounding']['start']['x'] = int(bbox[0][0] / rescale_factor)
+    dest['bounding']['start']['y'] = int(bbox[0][1] / rescale_factor)
+    dest['bounding']['end'] = OrderedDict()
+    dest['bounding']['end']['x'] = int(bbox[1][0] / rescale_factor)
+    dest['bounding']['end']['y'] = int(bbox[1][1] / rescale_factor)
+    dest['width'] = dest['bounding']['end']['x'] - dest['bounding']['start']['x']
+    dest['height'] = dest['bounding']['end']['y'] - dest['bounding']['start']['y']
+    return dest
+
+
+def postprocess_lines_boxes(list_of_lineboxen, text_handler=None, rescale_factor=1.0, **kwargs):
+    out = []
+
+    for linebox in list_of_lineboxen:
+        line = OrderedDict()
+        logging.debug(linebox.position)
+        line.update(bbox2properties(linebox.position, rescale_factor=rescale_factor))
+
+        line['words']  = postprocess_boxes(linebox.word_boxes, rescale_factor=rescale_factor)
+
+        out.append(line)
+
+    return out
+
+
+def postprocess_boxes(list_of_boxen, text_handler=None, rescale_factor=1.0, **kwargs):
+    if not len(list_of_boxen):
+        return None
+
+    out = []
+
+    for box in list_of_boxen:
+        text = box.content
+
+        if text_handler:
+            text = text_handler(text)
+
+        word = OrderedDict()
+        word['text']   = box.content
+        word.update(bbox2properties(box.position, rescale_factor=rescale_factor))
+
+        out.append(word)
+
+    return out
+
+
+def passthrough(value, text_handler=None, **kwargs):
+    if text_handler:
+        value = text_handler(value)
+
+    return value
+
+
+def text_asciify(value):
+    if isinstance(value, str):
+        value = value.encode('UTF-8')
+
+    return unidecode(value).encode('UTF-8')
 
 
 class ImageProxy(CommandProxy):
@@ -187,28 +253,43 @@ class ImageProxy(CommandProxy):
         if mode in self.modes:
             mode_name, pixel_format, bitdepth, colors = self.modes[mode]
 
-        data = {
-            'width':        image.width,
-            'height':       image.height,
-            'mode':         mode_name,
-            'colors':       colors,
-            'bitdepth':     bitdepth,
-            'pixel_format': pixel_format,
-        }
+        data = OrderedDict()
+        data['width']         = image.width
+        data['height']        = image.height
+        data['mode']          = mode_name
+        data['colors']        = colors
+        data['bitdepth']      = bitdepth
+        data['pixel_format']  = pixel_format
+        data['extended_info'] = image.info
 
         if bitdepth and pixel_format:
             data['bits_per_pixel'] = (bitdepth * len(pixel_format))
 
         # populate EXIF data (if present)
-        for tag, value in image._getexif().items():
-            if 'exif' not in data:
-                data['exif'] = {}
+        try:
+            for tag, value in image._getexif().items():
+                if 'exif' not in data:
+                    data['exif'] = {}
 
-            data['exif'][tag] = TAGS.get(tag, tag)
+                data['exif'][tag] = TAGS.get(tag, tag)
+
+        except AttributeError:
+            pass
 
         return data
 
-    def extract_text(self, selector=None, url=None, file=None, attribute='src', language='eng'):
+    def extract_text(
+        self,
+        selector=None,
+        url=None,
+        file=None,
+        attribute='src',
+        language='eng',
+        output_format='raw',
+        text_to_ascii=True,
+        rescale_factor=2.0,
+        rescale_width_threshold=4160
+    ):
         """
         Attempts to determine the text content of an image using OCR processing.
 
@@ -239,10 +320,92 @@ class ImageProxy(CommandProxy):
 
             The language of the text that is being detected.
 
+        - **output_format** (`str`):
+
+            Describes the way the text content is expected to be presented within the image.
+            Changing this value can help to refine the text extraction process and help improve
+            result accuracy.  Valid values include:
+
+            - *raw* (default):
+
+                Attempt to extract any text that is located in the image in the order that it is
+                encountered.  This is a good option for arbitrary images where little is known
+                about how the text is likely to be presented, with the trade-off that accuracy will
+                suffer as a result (mismatched or unmatched text is more likely.)
+
+            - *numeric*:
+
+                Treat the incoming image as only containing digits.
+
+            - *numeric-words*:
+
+                Treat the incoming image as only containing digits separated into separate "words"
+                by whitespace or non-numeric characters (e.g.: phone numbers, social security
+                numbers, etc.)  Output will be a list of objects describing each recognized
+                sequence of numbers, along with the position and dimensions of those words in the
+                source image.
+
+            - *lines*:
+
+                Return recognized text as a list of objects describing individual lines of
+                recognized text.
+
+        - **text_to_ascii** (`bool`):
+
+            Whether to automatically convert the resulting text to the ASCII character set before
+            returning. This is useful as the OCR process often produces output that includes
+            unusual characters not typically found in the source language because, due to various
+            quirks inherent in the underlying OCR models, those glyphs were deemed a better match
+            optically-speaking.
+
+            This serves to undo that and provide a better fit for languages with Latin-based
+            alphabets.
+
+        - **rescale_factor** (`float`):
+
+            The underlying OCR process works MUCH better with larger input images, so this provides
+            some tuning for resizing the input image data to potentially produce better results.
+            The default is to double the image size provided the input image's width is less than
+            **rescale_width_threshold**.
+
+        - **rescale_width_threshold** (`int`):
+
+            For **rescale_factor** values greater than 1.0, this represents the maximum width of an
+            input image for which the rescale will occur (e.g.: don't blow up images that are
+            already large to begin with.)
+
+            For **rescale_factor** values less than 1.0, this is the _minumum_ width of an input
+            image below which it doesn't make sense to shrink it further.  Factor's less than 1.0
+            only really make sense in the context of OCR extraction when the source images are VERY
+            large and you want to discard some data and save time or memory during processing.
+
         #### Returns
         A string representing the detected text, or `None` if the detection failed.
         """
         image = self.open(selector=selector, url=url, file=file, attribute=attribute)
+
+        # Tesseract will have a much better time with larger images, so as a safety margin we're
+        # going to double the size of any input image that's narrower than rescale_width_threshold.
+        #
+        # Unless we're trying to make the image smaller, in which case rescale_width_threshold is
+        # interpreted to mean "maximum size".
+        #
+        if rescale_factor < 1.0 and image.width > rescale_width_threshold or \
+           rescale_factor > 1.0 and image.width < rescale_width_threshold:
+            size = (int(image.width * rescale_factor), int(image.height * rescale_factor))
+
+            logging.debug('Resizing image ({} x {}) {}x to ({} x {})'.format(
+                image.width,
+                image.height,
+                rescale_factor,
+                size[0],
+                size[1]
+            ))
+
+            image = image.resize(
+                size,
+                resample=Image.BICUBIC
+            )
 
         tools = pyocr.get_available_tools()
 
@@ -262,11 +425,52 @@ class ImageProxy(CommandProxy):
                         else:
                             continue
 
-                        return tool.image_to_string(
+                        postprocess = passthrough
+                        text_handler = None
+
+                        if text_to_ascii:
+                            text_handler = text_asciify
+
+                        # Text Builders
+                        # -------------
+                        if output_format == 'raw':
+                            builder = pyocr.builders.TextBuilder()
+
+                        elif output_format == 'numeric':
+                            builder = pyocr.builders.DigitBuilder()
+
+                        elif output_format == 'numeric-words':
+                            builder = pyocr.builders.DigitLineBoxBuilder()
+                            postprocess = postprocess_boxes
+
+                        elif output_format == 'words':
+                            builder = pyocr.builders.WordBoxBuilder()
+                            postprocess = postprocess_boxes
+
+                        elif output_format == 'lines':
+                            builder = pyocr.builders.LineBox()
+                            postprocess = postprocess_boxes
+
+                        elif output_format == 'lines-words':
+                            builder = pyocr.builders.LineBoxBuilder()
+                            postprocess = postprocess_lines_boxes
+
+                        elif output_format == 'characters':
+                            builder = pyocr.tesseract.CharBoxBuilder()
+                            postprocess = postprocess_boxes
+
+                        else:
+                            raise ValueError("Unrecognized output_format '{}'".format(
+                                output_format
+                            ))
+
+                        logging.debug('Performing character recognition on input image')
+
+                        return postprocess(tool.image_to_string(
                             image,
                             lang=ocr_lang,
-                            builder=pyocr.builders.TextBuilder()
-                        )
+                            builder=builder
+                        ), text_handler=text_handler, rescale_factor=rescale_factor)
 
                     except:
                         continue

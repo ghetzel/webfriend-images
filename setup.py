@@ -10,8 +10,9 @@ setup(
     author_email='garyhetzel@gmail.com',
     url='https://github.com/ghetzel/webfriend-images',
     install_requires=[
-        'webfriend',
         'pyocr',
+        'unidecode',
+        'webfriend',
     ],
     packages=find_packages(exclude=['*.tests']),
     classifiers=[],

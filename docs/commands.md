@@ -17,10 +17,14 @@ text extraction.
 
 ```
 image::extract_text <SELECTOR> {
-    url:       null,
-    file:      null,
-    attribute: 'src',
-    language:  'eng'
+    url:                     null,
+    file:                    null,
+    attribute:               'src',
+    language:                'eng',
+    output_format:           'raw',
+    text_to_ascii:           true,
+    rescale_factor:          2.0,
+    rescale_width_threshold: 4160
 }
 ```
 
@@ -52,6 +56,65 @@ Attempts to determine the text content of an image using OCR processing.
 - **language** (`str`):
 
     The language of the text that is being detected.
+
+- **output_format** (`str`):
+
+    Describes the way the text content is expected to be presented within the image.
+    Changing this value can help to refine the text extraction process and help improve
+    result accuracy.  Valid values include:
+
+    - *raw* (default):
+
+        Attempt to extract any text that is located in the image in the order that it is
+        encountered.  This is a good option for arbitrary images where little is known
+        about how the text is likely to be presented, with the trade-off that accuracy will
+        suffer as a result (mismatched or unmatched text is more likely.)
+
+    - *numeric*:
+
+        Treat the incoming image as only containing digits.
+
+    - *numeric-words*:
+
+        Treat the incoming image as only containing digits separated into separate "words"
+        by whitespace or non-numeric characters (e.g.: phone numbers, social security
+        numbers, etc.)  Output will be a list of objects describing each recognized
+        sequence of numbers, along with the position and dimensions of those words in the
+        source image.
+
+    - *lines*:
+
+        Return recognized text as a list of objects describing individual lines of
+        recognized text.
+
+- **text_to_ascii** (`bool`):
+
+    Whether to automatically convert the resulting text to the ASCII character set before
+    returning. This is useful as the OCR process often produces output that includes
+    unusual characters not typically found in the source language because, due to various
+    quirks inherent in the underlying OCR models, those glyphs were deemed a better match
+    optically-speaking.
+
+    This serves to undo that and provide a better fit for languages with Latin-based
+    alphabets.
+
+- **rescale_factor** (`float`):
+
+    The underlying OCR process works MUCH better with larger input images, so this provides
+    some tuning for resizing the input image data to potentially produce better results.
+    The default is to double the image size provided the input image's width is less than
+    **rescale_width_threshold**.
+
+- **rescale_width_threshold** (`int`):
+
+    For **rescale_factor** values greater than 1.0, this represents the maximum width of an
+    input image for which the rescale will occur (e.g.: don't blow up images that are
+    already large to begin with.)
+
+    For **rescale_factor** values less than 1.0, this is the _minumum_ width of an input
+    image below which it doesn't make sense to shrink it further.  Factor's less than 1.0
+    only really make sense in the context of OCR extraction when the source images are VERY
+    large and you want to discard some data and save time or memory during processing.
 
 #### Returns
 A string representing the detected text, or `None` if the detection failed.
