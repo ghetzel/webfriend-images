@@ -17,7 +17,6 @@ build:
 
 test:
 	./env/bin/flake8
-	./env/bin/bandit -ll -ii --recursive .
 	./env/bin/py.test -v
 
 clean:
