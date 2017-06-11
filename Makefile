@@ -24,4 +24,4 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 docs:
-	./env/bin/webfriend --generate-docs --only-document-plugins --plugins image > docs/commands.md
+	./env/bin/webfriend --generate-docs --only-document-plugins --omit-header --plugins image > docs/commands.md

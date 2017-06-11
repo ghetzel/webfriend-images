@@ -1,6 +1,3 @@
-"""
-This module contains documentation on the commands supported by the WebFriend Image Plugin.
-"""
 # flake8: noqa
 from __future__ import absolute_import
 from pkgutil import extend_path
