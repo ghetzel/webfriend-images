@@ -10,6 +10,13 @@ from collections import OrderedDict
 
 
 class ImageProxy(CommandProxy):
+    """
+    The `image` command set provides access to utiliies for loading, processing, and manipulating
+    graphical data and for working with graphics primitives (like colors.)  These commands are
+    useful for working with images on a webpage for tasks that include pixel color sampling and OCR
+    text extraction.
+    """
+
     pyocr_env_paths = {
         'TESSDATA_PREFIX': [
             '/usr/share/tessdata',
@@ -18,19 +25,6 @@ class ImageProxy(CommandProxy):
     }
 
     # tuple format: name, pixel_format, bits, color count
-
-    # 1 (1-bit pixels, black and white, stored with one pixel per byte)
-    # L (8-bit pixels, black and white)
-    # P (8-bit pixels, mapped to any other mode using a color palette)
-    # RGB (3x8-bit pixels, true color)
-    # RGBA (4x8-bit pixels, true color with transparency mask)
-    # CMYK (4x8-bit pixels, color separation)
-    # YCbCr (3x8-bit pixels, color video format)
-    # LAB (3x8-bit pixels, the L*a*b color space)
-    # HSV (3x8-bit pixels, Hue, Saturation, Value color space)
-    # I (32-bit signed integer pixels)
-    # F (32-bit floating point pixels)
-
     modes = {
         '1':     ('monochrome', 'B',     1,  2),
         'L':     ('greyscale',  'L',     8,  256),
@@ -44,9 +38,6 @@ class ImageProxy(CommandProxy):
         'I':     ('opaque32',   'I',     32, 4294967296),
         'F':     ('opaque32f',  'F',     32, 4294967296),
     }
-
-
-
 
     def rgb2hex(self, r, g, b, a=None):
         """

@@ -8,6 +8,11 @@
 
 ## `image` Command Set
 
+The `image` command set provides access to utiliies for loading, processing, and manipulating
+graphical data and for working with graphics primitives (like colors.)  These commands are
+useful for working with images on a webpage for tasks that include pixel color sampling and OCR
+text extraction.
+
 ### `image::extract_text`
 
 ```
