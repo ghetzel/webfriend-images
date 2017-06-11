@@ -1,6 +1,6 @@
 .PHONY: test deps docs build shell clean
 
-all: env deps build test
+all: env deps build docs
 
 deps:
 	./env/bin/pip install -q -r 'test-requirements.txt'
@@ -22,3 +22,6 @@ test:
 clean:
 	-rm -rf env *.egg-info build dist
 	find . -type f -name "*.pyc" -delete
+
+docs:
+	./env/bin/webfriend --generate-docs --only-document-plugins --plugins image > docs/commands.md
