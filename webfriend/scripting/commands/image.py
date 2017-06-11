@@ -8,29 +8,6 @@ import pyocr
 import pyocr.builders
 from collections import OrderedDict
 
-IMAGE_ARGS = """
-- **selector** (`str`, optional):
-
-    A selector that refers to one and only one HTML element that has an attribute referring
-    to an image that was loaded. This typically means selecting an `<img>` tag whose `src`
-    attribute was used to load an image.
-
-- **url** (`str`, optional):
-
-    If the URL of the image that was loaded is known directly, this is that URL.  This must
-    be the URL of a request that has already occurred.
-
-- **file** (`str`, `file-like object`, optional):
-
-    This is a file-like object or the string of a local filesystem file representing the
-    image to load.
-
-- **attribute** (`str`):
-
-    This is the attribute containing the image URL on the HTML element referred to by
-    **selector**.
-"""
-
 
 class ImageProxy(CommandProxy):
     pyocr_env_paths = {
@@ -77,7 +54,7 @@ class ImageProxy(CommandProxy):
 
         #### Arguments
 
-        - **r**, **g**, **b*, **a** (`int`):
+        - **r**, **g**, **b**, **a** (`int`):
 
             The 8-bit integer values (0-255) of the red, green, blue, (and optionally) alpha
             components of the color to convert.
@@ -95,7 +72,28 @@ class ImageProxy(CommandProxy):
         Opens an image from a given local file, a file-like object, from a given URL, or from the
         image data referred to by the given HTML element.
 
-        #### Arguments""" + IMAGE_ARGS + """
+        #### Arguments
+
+        - **selector** (`str`, optional):
+
+            A selector that refers to one and only one HTML element that has an attribute referring
+            to an image that was loaded. This typically means selecting an `<img>` tag whose `src`
+            attribute was used to load an image.
+
+        - **url** (`str`, optional):
+
+            If the URL of the image that was loaded is known directly, this is that URL.  This must
+            be the URL of a request that has already occurred.
+
+        - **file** (`str`, `file-like object`, optional):
+
+            This is a file-like object or the string of a local filesystem file representing the
+            image to load.
+
+        - **attribute** (`str`):
+
+            This is the attribute containing the image URL on the HTML element referred to by
+            **selector**.
 
         #### Returns
         A raw image object that can be manipulated and queried.
@@ -133,7 +131,28 @@ class ImageProxy(CommandProxy):
         """
         Retrieves details about an image.
 
-        #### Arguments""" + IMAGE_ARGS + """
+        #### Arguments
+
+        - **selector** (`str`, optional):
+
+            A selector that refers to one and only one HTML element that has an attribute referring
+            to an image that was loaded. This typically means selecting an `<img>` tag whose `src`
+            attribute was used to load an image.
+
+        - **url** (`str`, optional):
+
+            If the URL of the image that was loaded is known directly, this is that URL.  This must
+            be the URL of a request that has already occurred.
+
+        - **file** (`str`, `file-like object`, optional):
+
+            This is a file-like object or the string of a local filesystem file representing the
+            image to load.
+
+        - **attribute** (`str`):
+
+            This is the attribute containing the image URL on the HTML element referred to by
+            **selector**.
 
         #### Returns
         A `dict` containing image details.
@@ -202,7 +221,28 @@ class ImageProxy(CommandProxy):
         """
         Attempts to determine the text content of an image using OCR processing.
 
-        #### Arguments""" + IMAGE_ARGS + """
+        #### Arguments
+
+        - **selector** (`str`, optional):
+
+            A selector that refers to one and only one HTML element that has an attribute referring
+            to an image that was loaded. This typically means selecting an `<img>` tag whose `src`
+            attribute was used to load an image.
+
+        - **url** (`str`, optional):
+
+            If the URL of the image that was loaded is known directly, this is that URL.  This must
+            be the URL of a request that has already occurred.
+
+        - **file** (`str`, `file-like object`, optional):
+
+            This is a file-like object or the string of a local filesystem file representing the
+            image to load.
+
+        - **attribute** (`str`):
+
+            This is the attribute containing the image URL on the HTML element referred to by
+            **selector**.
 
         - **language** (`str`):
 
@@ -246,7 +286,28 @@ class ImageProxy(CommandProxy):
         """
         Retrieves the color of a specific pixel in the image.
 
-        #### Arguments""" + IMAGE_ARGS + """
+        #### Arguments
+
+        - **selector** (`str`, optional):
+
+            A selector that refers to one and only one HTML element that has an attribute referring
+            to an image that was loaded. This typically means selecting an `<img>` tag whose `src`
+            attribute was used to load an image.
+
+        - **url** (`str`, optional):
+
+            If the URL of the image that was loaded is known directly, this is that URL.  This must
+            be the URL of a request that has already occurred.
+
+        - **file** (`str`, `file-like object`, optional):
+
+            This is a file-like object or the string of a local filesystem file representing the
+            image to load.
+
+        - **attribute** (`str`):
+
+            This is the attribute containing the image URL on the HTML element referred to by
+            **selector**.
 
         - **x**, **y** (`int`):
 
